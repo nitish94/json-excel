@@ -28,12 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({ path: newUrl }, '', newUrl);
     }
 
-    // If demo, show home screen
-    if (currentId === 'demo') {
-        showHomeScreen();
-        return;
-    }
-
     uploadBtn.addEventListener('click', () => {
         fileUpload.click();
     });
@@ -560,39 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'block';
     }
 
-    function showHomeScreen() {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem;">
-                <h2>Welcome to JSON Excel Editor</h2>
-                <p>Create, edit, and manage your JSON data visually.</p>
-                <button class="btn is-primary" onclick="startNew()">Start New Project</button>
-                <br><br>
-                <button class="btn is-secondary" onclick="loadDemo()">Load Demo</button>
-                <br><br>
-                <button class="btn is-secondary" onclick="goAdvanced()">Advanced Editor (3-Level Nesting)</button>
-            </div>
-        `;
-        document.getElementById('title').textContent = 'Home';
-        // Hide actions
-        document.querySelector('.actions').style.display = 'none';
-    }
 
-    window.startNew = () => {
-        currentId = generateClientID();
-        window.history.pushState({ path: `?id=${currentId}` }, '', `?id=${currentId}`);
-        location.reload();
-    };
-
-    window.loadDemo = () => {
-        currentId = 'demo';
-        fetchData();
-        document.getElementById('title').textContent = 'JSON Excel Editor';
-        document.querySelector('.actions').style.display = 'flex';
-    };
-
-    window.goAdvanced = () => {
-        window.location.href = '/advanced';
-    };
 
     closeModal.onclick = () => modal.style.display = 'none';
     window.onclick = (event) => {

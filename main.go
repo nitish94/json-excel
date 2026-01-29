@@ -128,6 +128,7 @@ func cleanupOldFiles() {
 					}
 				}
 			}
+			log.Printf("Cleanup completed, checked %d files", len(files))
 		}
 	}
 }

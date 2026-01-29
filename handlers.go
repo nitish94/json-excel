@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -149,6 +150,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		data, err := utils.ReadJSONFile(dataFile)
 		mu.RUnlock()
 		if err != nil {
+			log.Printf("Error reading file for id %s: %v", id, err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -162,6 +164,7 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 		var newData interface{}
 		if err := json.NewDecoder(r.Body).Decode(&newData); err != nil {
+			log.Printf("Error decoding JSON for id %s: %v", id, err)
 			mu.Unlock()
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -169,12 +172,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Validation
 		if err := validation.ValidateJSONStructure(newData); err != nil {
+			log.Printf("Validation error for id %s: %v", id, err)
 			mu.Unlock()
 			http.Error(w, fmt.Sprintf("Validation Error: %s", err), http.StatusBadRequest)
 			return
 		}
 
 		if err := utils.WriteJSONFile(dataFile, newData); err != nil {
+			log.Printf("Error writing file for id %s: %v", id, err)
 			mu.Unlock()
 			http.Error(w, "Error saving file", http.StatusInternalServerError)
 			return
@@ -199,6 +204,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
+		log.Printf("Error retrieving file: %v", err)
 		http.Error(w, "Error retrieving file", http.StatusBadRequest)
 		return
 	}
@@ -207,6 +213,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Read content
 	byteValue, err := ioutil.ReadAll(file)
 	if err != nil {
+		log.Printf("Error reading file content: %v", err)
 		http.Error(w, "Error reading file", http.StatusInternalServerError)
 		return
 	}
@@ -214,6 +221,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse and Validate
 	var newData interface{}
 	if err := json.Unmarshal(byteValue, &newData); err != nil {
+		log.Printf("Invalid JSON format: %v", err)
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
@@ -221,11 +229,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Normalize the data
 	normalizedData, err := normalizeJSONData(newData)
 	if err != nil {
+		log.Printf("Normalization error: %v", err)
 		http.Error(w, fmt.Sprintf("Normalization Error: %s", err), http.StatusBadRequest)
 		return
 	}
 
 	if err := validation.ValidateJSONStructure(normalizedData); err != nil {
+		log.Printf("Validation error: %v", err)
 		http.Error(w, fmt.Sprintf("Validation Error: %s", err), http.StatusBadRequest)
 		return
 	}
@@ -240,6 +250,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	err = utils.WriteJSONFile(targetFile, normalizedData)
 	mu.Unlock()
 	if err != nil {
+		log.Printf("Error saving uploaded file for id %s: %v", id, err)
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
@@ -280,6 +291,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := utils.ReadJSONFile(dataFile)
 	mu.RUnlock()
 	if err != nil {
+		log.Printf("Error reading data for download id %s: %v", id, err)
 		http.Error(w, "Error reading data", http.StatusInternalServerError)
 		return
 	}
@@ -313,6 +325,7 @@ func undoHandler(w http.ResponseWriter, r *http.Request) {
 	// Get undo data
 	undoVal, ok := undoData.Load(id)
 	if !ok {
+		log.Printf("No undo data for id %s", id)
 		http.Error(w, "No undo data available", http.StatusBadRequest)
 		return
 	}
@@ -320,6 +333,7 @@ func undoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Restore
 	if err := utils.WriteJSONFile(dataFile, undoVal); err != nil {
+		log.Printf("Error restoring file for id %s: %v", id, err)
 		http.Error(w, "Error restoring file", http.StatusInternalServerError)
 		return
 	}
