@@ -7,9 +7,11 @@ A modern web application that transforms structured JSON into a spreadsheet-like
 - **Visual JSON Editing**: Edit JSON data in a spreadsheet-like interface.
 - **Nested Tables**: Support for Table-inside-Table (1 level of nesting) with add/delete rows in nested tables.
 - **Create from Scratch**: Start with an empty JSON and add columns (primitive or nested) and rows.
-- **Validation**: Enforces maximum keys per object (configurable) and 1 level of nesting.
+- **Advanced Editor**: 3-level deep nesting for complex JSON structures (/advanced).
+- **Undo Functionality**: One-step undo for accidental changes.
+- **Validation**: Enforces maximum keys per object (configurable) and nesting levels.
 - **Glassmorphism UI**: Modern, premium user interface.
-- **File Management**: Upload and download JSON files with size limits.
+- **File Management**: Upload and download JSON files with size limits and normalization.
 - **Multi-User Support**: Generates unique User ID per session/browser, stores separate files (data_<userid>.json).
 - **Concurrency Safe**: Uses RWMutex to prevent file corruption during simultaneous saves.
 - **Automatic Cleanup**: Background process deletes unused files older than 24 hours every hour.
@@ -22,6 +24,7 @@ A modern web application that transforms structured JSON into a spreadsheet-like
 3. Run `go mod tidy` to install dependencies.
 4. Run `go run main.go handlers.go` to start the server.
 5. Open `http://localhost:<PORT>` in your browser.
+6. For advanced 3-level nesting editor, go to `http://localhost:<PORT>/advanced`.
 
 ## Configuration
 

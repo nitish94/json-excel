@@ -95,6 +95,7 @@ func main() {
 	http.HandleFunc("/api/data", dataHandler)
 	http.HandleFunc("/api/upload", uploadHandler)
 	http.HandleFunc("/api/download", downloadHandler)
+	http.HandleFunc("/api/undo", undoHandler)
 
 	log.Printf("Server started on http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))

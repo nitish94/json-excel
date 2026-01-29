@@ -20,7 +20,7 @@
 
     <div class="container">
         <header>
-            <h1>JSON Excel Editor</h1>
+            <h1 id="title">JSON Excel Editor</h1>
             <div class="actions">
                 <input type="file" id="fileUpload" accept=".json" style="display: none;" />
                 <button id="addRowBtn" class="btn is-primary">+ Row</button>
@@ -30,6 +30,7 @@
                 <button id="uploadBtn" class="btn is-secondary">Upload</button>
                 <button id="downloadBtn" class="btn is-secondary">Download JSON</button>
                 <button id="saveBtn" class="btn is-primary">Save Changes</button>
+                <button id="undoBtn" class="btn is-secondary">Undo</button>
                 <button id="refreshBtn" class="btn is-secondary">Refresh</button>
                 <span id="status" class="status-indicator"></span>
             </div>

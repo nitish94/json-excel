@@ -28,6 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({ path: newUrl }, '', newUrl);
     }
 
+    // If demo, show home screen
+    if (currentId === 'demo') {
+        showHomeScreen();
+        return;
+    }
+
     uploadBtn.addEventListener('click', () => {
         fileUpload.click();
     });
@@ -118,6 +124,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(error);
             showStatus(`Save failed: ${error.message}`, 'error');
+        }
+    }
+
+    async function undo() {
+        showStatus('Undoing...', 'normal');
+        try {
+            const response = await fetch(`/api/undo?id=${currentId}`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText);
+            }
+
+            await fetchData();
+            showStatus('Undone!', 'success');
+        } catch (error) {
+            console.error(error);
+            showStatus(`Undo failed: ${error.message}`, 'error');
         }
     }
 
@@ -507,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     saveBtn.addEventListener('click', saveData);
+    undoBtn.addEventListener('click', undo);
     refreshBtn.addEventListener('click', fetchData);
 
     // Generate random ID client-side
@@ -532,6 +559,40 @@ document.addEventListener('DOMContentLoaded', () => {
         modalBody.appendChild(cancelBtn);
         modal.style.display = 'block';
     }
+
+    function showHomeScreen() {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <h2>Welcome to JSON Excel Editor</h2>
+                <p>Create, edit, and manage your JSON data visually.</p>
+                <button class="btn is-primary" onclick="startNew()">Start New Project</button>
+                <br><br>
+                <button class="btn is-secondary" onclick="loadDemo()">Load Demo</button>
+                <br><br>
+                <button class="btn is-secondary" onclick="goAdvanced()">Advanced Editor (3-Level Nesting)</button>
+            </div>
+        `;
+        document.getElementById('title').textContent = 'Home';
+        // Hide actions
+        document.querySelector('.actions').style.display = 'none';
+    }
+
+    window.startNew = () => {
+        currentId = generateClientID();
+        window.history.pushState({ path: `?id=${currentId}` }, '', `?id=${currentId}`);
+        location.reload();
+    };
+
+    window.loadDemo = () => {
+        currentId = 'demo';
+        fetchData();
+        document.getElementById('title').textContent = 'JSON Excel Editor';
+        document.querySelector('.actions').style.display = 'flex';
+    };
+
+    window.goAdvanced = () => {
+        window.location.href = '/advanced';
+    };
 
     closeModal.onclick = () => modal.style.display = 'none';
     window.onclick = (event) => {

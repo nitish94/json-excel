@@ -13,6 +13,7 @@ import (
 )
 
 var fileMutexes sync.Map
+var undoData sync.Map
 
 // getDataFilePath returns the filename for a given ID
 func getDataFilePath(id string) string {
@@ -155,6 +156,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		mu.Lock()
+		// Save current data for undo
+		currentData, _ := utils.ReadJSONFile(dataFile)
+		undoData.Store(id, currentData)
+
 		var newData interface{}
 		if err := json.NewDecoder(r.Body).Decode(&newData); err != nil {
 			mu.Unlock()
@@ -285,4 +290,40 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
 	encoder.Encode(data)
+}
+
+func undoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "Missing 'id' parameter", http.StatusBadRequest)
+		return
+	}
+
+	dataFile := getDataFilePath(id)
+	mu := getMutex(id)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Get undo data
+	undoVal, ok := undoData.Load(id)
+	if !ok {
+		http.Error(w, "No undo data available", http.StatusBadRequest)
+		return
+	}
+	undoData.Delete(id) // One time use
+
+	// Restore
+	if err := utils.WriteJSONFile(dataFile, undoVal); err != nil {
+		http.Error(w, "Error restoring file", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
