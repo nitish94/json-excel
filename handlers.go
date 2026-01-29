@@ -20,7 +20,7 @@ var undoData sync.Map
 func getDataFilePath(id string) string {
 	// Sanitize ID to prevent directory traversal
 	// Simple alphanumeric check could be added here, but hex is safe
-	return fmt.Sprintf("data_%s.json", id)
+	return fmt.Sprintf("data/data_%s.json", id)
 }
 
 // getMutex returns the RWMutex for a given ID
@@ -158,9 +158,14 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		mu.Lock()
-		// Save current data for undo
+		// Save current data for undo (deep copy)
 		currentData, _ := utils.ReadJSONFile(dataFile)
-		undoData.Store(id, currentData)
+		if currentData != nil {
+			dataBytes, _ := json.Marshal(currentData)
+			var undoCopy interface{}
+			json.Unmarshal(dataBytes, &undoCopy)
+			undoData.Store(id, undoCopy)
+		}
 
 		var newData interface{}
 		if err := json.NewDecoder(r.Body).Decode(&newData); err != nil {

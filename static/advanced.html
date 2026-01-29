@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced JSON Excel Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 id="title">Advanced JSON Excel Editor</h1>
+            <div class="actions">
+                <button onclick="window.location.href='/'" class="btn is-secondary">Back to Basic</button>
+                <input type="file" id="fileUpload" accept=".json" style="display: none;" />
+                <button id="addRowBtn" class="btn is-primary">+ Row</button>
+                <button id="addColumnBtn" class="btn is-primary">+ Column</button>
+                <div class="divider"
+                    style="width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
+                <button id="uploadBtn" class="btn is-secondary">Upload</button>
+                <button id="downloadBtn" class="btn is-secondary">Download JSON</button>
+                <button id="saveBtn" class="btn is-primary">Save Changes</button>
+                <button id="undoBtn" class="btn is-secondary">Undo</button>
+                <button id="refreshBtn" class="btn is-secondary">Refresh</button>
+                <span id="status" class="status-indicator"></span>
+            </div>
+        </header>
+
+        <main class="glass-panel">
+            <div id="spreadsheet-container" class="spreadsheet-container">
+                <!-- Table will be injected here -->
+            </div>
+        </main>
+
+        <!-- Modal for dialogs -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="advanced.js"></script>
+</body>
+
+</html>

@@ -14,7 +14,7 @@ import (
 	"json-excel/pkg/validation"
 )
 
-const DataFile = "data_demo.json"
+const DataFile = "data/data_demo.json"
 
 var maxUploadSize int64
 
@@ -59,6 +59,11 @@ func main() {
 	}
 	maxUploadSize = int64(maxUploadMB) * 1024 * 1024
 
+	// Create data directory
+	if err := os.MkdirAll("data", 0755); err != nil {
+		log.Fatalf("Failed to create data directory: %v", err)
+	}
+
 	// Start cleanup goroutine
 	go cleanupOldFiles()
 
@@ -97,18 +102,23 @@ func main() {
 	http.HandleFunc("/api/download", downloadHandler)
 	http.HandleFunc("/api/undo", undoHandler)
 
+	// Serve advanced.html for /advanced
+	http.HandleFunc("/advanced", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/advanced.html")
+	})
+
 	log.Printf("Server started on http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-// cleanupOldFiles runs every hour and deletes data_*.json files older than 24 hours
+// cleanupOldFiles runs every hour and deletes data/data_*.json files older than 24 hours
 func cleanupOldFiles() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			files, err := filepath.Glob("data_*.json")
+			files, err := filepath.Glob("data/data_*.json")
 			if err != nil {
 				log.Printf("Error globbing files: %v", err)
 				continue
