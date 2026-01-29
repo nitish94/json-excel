@@ -27,6 +27,7 @@ A modern web application that transforms structured JSON into a spreadsheet-like
 5. Open `http://localhost:<PORT>` in your browser (defaults to demo).
 6. Access saved files via `http://localhost:<PORT>?id=<fileid>`.
 7. For advanced 3-level nesting editor, go to `http://localhost:<PORT>/advanced`.
+8. Graceful shutdown: Use Ctrl+C to stop the server; it will wait for active operations to complete.
 
 ## Configuration
 

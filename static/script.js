@@ -133,8 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errText);
             }
 
-            await fetchData();
-            showStatus('Undone!', 'success');
+            showStatus('Undone! Refresh the page to see changes.', 'success');
         } catch (error) {
             console.error(error);
             showStatus(`Undo failed: ${error.message}`, 'error');
