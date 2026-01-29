@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
@@ -20,6 +22,9 @@
         <header>
             <h1>JSON Excel Editor</h1>
             <div class="actions">
+                <input type="file" id="fileUpload" accept=".json" style="display: none;" />
+                <button id="uploadBtn" class="btn is-secondary">Upload JSON</button>
+                <button id="downloadBtn" class="btn is-secondary">Download JSON</button>
                 <button id="saveBtn" class="btn is-primary">Save Changes</button>
                 <button id="refreshBtn" class="btn is-secondary">Refresh</button>
                 <span id="status" class="status-indicator"></span>
@@ -35,4 +40,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

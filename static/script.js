@@ -2,12 +2,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('spreadsheet-container');
     const saveBtn = document.getElementById('saveBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fileUpload = document.getElementById('fileUpload');
     const statusEl = document.getElementById('status');
-    
+
     let currentData = [];
 
     // Validations
     const MAX_KPIS = 10;
+
+    uploadBtn.addEventListener('click', () => {
+        fileUpload.click();
+    });
+
+    displayUploadFileName = () => {
+        // Optional: Update status when file picked
+    }
+
+    fileUpload.addEventListener('change', async (e) => {
+        if (fileUpload.files.length === 0) return;
+
+        const file = fileUpload.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showStatus('Uploading...', 'normal');
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText);
+            }
+
+            const result = await response.json();
+            showStatus(result.message || 'Uploaded successfully', 'success');
+
+            // Refund/Reload data
+            await fetchData();
+            // Clear input
+            fileUpload.value = '';
+
+        } catch (error) {
+            console.error(error);
+            showStatus(`Upload failed: ${error.message}`, 'error');
+            fileUpload.value = '';
+        }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        window.location.href = '/api/download';
+    });
 
     async function fetchData() {
         showStatus('Loading...', 'normal');
@@ -40,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errText = await response.text();
                 throw new Error(errText);
             }
-            
+
             showStatus('Saved successfully!', 'success');
         } catch (error) {
             console.error(error);
@@ -53,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (type === 'error') statusEl.style.color = '#ff6b6b';
         else if (type === 'success') statusEl.style.color = '#4ade80';
         else statusEl.style.color = '#94a3b8';
-        
+
         setTimeout(() => {
             if (statusEl.textContent === msg) statusEl.textContent = '';
         }, 5000);
@@ -78,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Enforce MAX 10 KPIs constraint visual warning or slicing? 
         // The backend enforces it on save. Here we just render what we have.
         // But if we want to "automatically become null" for missing, we handle that in rows.
-        
+
         // Header Row
         const trHead = document.createElement('tr');
         headers.forEach(key => {
@@ -94,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             headers.forEach(key => {
                 const td = document.createElement('td');
                 const value = rowObj[key];
-                
+
                 // Check if value is a "Nested Table" (Array of Objects)
                 if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
                     // Render Nested Table
@@ -119,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     input.className = 'cell-input';
                     input.type = 'text';
                     input.value = value === undefined || value === null ? '' : value;
-                    
+
                     input.addEventListener('input', (e) => {
                         let val = e.target.value;
                         // Try to convert to number if it looks like one?
@@ -131,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         currentData[rowIndex][key] = val;
                     });
-                    
+
                     td.appendChild(input);
                 }
                 tr.appendChild(td);
@@ -179,8 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!isNaN(val) && val.trim() !== '') {
                         val = Number(val);
                     }
-                    
-                    if(isSingleObject) {
+
+                    if (isSingleObject) {
                         // It was a single object, so we are editing the object itself at currentData[parentIndex][parentKey]
                         currentData[parentIndex][parentKey][key] = val;
                     } else {
