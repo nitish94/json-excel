@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Excel Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>JSON Excel Editor</h1>
+            <div class="actions">
+                <button id="saveBtn" class="btn is-primary">Save Changes</button>
+                <button id="refreshBtn" class="btn is-secondary">Refresh</button>
+                <span id="status" class="status-indicator"></span>
+            </div>
+        </header>
+
+        <main class="glass-panel">
+            <div id="spreadsheet-container" class="spreadsheet-container">
+                <!-- Table will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
