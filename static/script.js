@@ -277,12 +277,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isSingleObject) {
             // For single object, perhaps not add row, or convert to array
             // For simplicity, if single object, maybe alert not supported
-            alert("Cannot add rows to single object nested.");
+            showModal('<p>Cannot add rows to single object nested.</p>', () => {});
             return;
         }
         // Add a new empty object to the array
         const emptyObj = {};
-        headers.forEach(key => emptyObj[key] = "");
+        (headers || []).forEach(key => emptyObj[key] = "");
         currentData[parentIndex][parentKey].push(emptyObj);
         renderTable(currentData);
     }
@@ -321,6 +321,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let allKeys = new Set();
         data.forEach(obj => Object.keys(obj).forEach(k => allKeys.add(k)));
         let headers = Array.from(allKeys);
+
+        // Collect nested headers
+        let nestedHeaders = {};
+        data.forEach(row => {
+            headers.forEach(key => {
+                const val = row[key];
+                if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+                    nestedHeaders[key] = Object.keys(val[0]);
+                }
+            });
+        });
 
         // Header Row
         const trHead = document.createElement('tr');
@@ -372,18 +383,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const td = document.createElement('td');
                 const value = rowObj[key];
 
-                // Check if value is a "Nested Table" (Array of Objects)
-                if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
-                    // Render Nested Table
+                // Check if value is a "Nested Table" (Array of Objects, even empty)
+                if (Array.isArray(value)) {
+                    // Render Nested Table, even if empty
                     const nestedDiv = document.createElement('div');
                     nestedDiv.className = 'nested-table-container';
-                    nestedDiv.appendChild(createNestedTable(value, rowIndex, key));
+                    nestedDiv.appendChild(createNestedTable(value, rowIndex, key, false, nestedHeaders[key] || []));
                     td.appendChild(nestedDiv);
                 } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                     // Object treated as one-row nested table
                     const nestedDiv = document.createElement('div');
                     nestedDiv.className = 'nested-table-container';
-                    nestedDiv.appendChild(createNestedTable([value], rowIndex, key, true)); // Wrap in array
+                    nestedDiv.appendChild(createNestedTable([value], rowIndex, key, true, nestedHeaders[key] || Object.keys(value))); // Wrap in array
                     td.appendChild(nestedDiv);
                 } else {
                     // Primitive Value -> Input
@@ -412,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(table);
     }
 
-    function createNestedTable(nestedData, parentIndex, parentKey, isSingleObject = false) {
+    function createNestedTable(nestedData, parentIndex, parentKey, isSingleObject = false, fixedHeaders = null) {
         const container = document.createElement('div');
         container.className = 'nested-table-wrapper';
 
@@ -420,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const addNestedRowBtn = document.createElement('button');
         addNestedRowBtn.className = 'add-nested-row-btn';
         addNestedRowBtn.textContent = '+ Add Nested Row';
-        addNestedRowBtn.onclick = () => addNestedRow(parentIndex, parentKey, isSingleObject, headers);
+        addNestedRowBtn.onclick = () => addNestedRow(parentIndex, parentKey, isSingleObject, fixedHeaders || headers);
         container.appendChild(addNestedRowBtn);
 
         const table = document.createElement('table');
@@ -428,9 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const thead = document.createElement('thead');
         const tbody = document.createElement('tbody');
 
-        let nestedKeys = new Set();
-        nestedData.forEach(obj => Object.keys(obj).forEach(k => nestedKeys.add(k)));
-        let headers = Array.from(nestedKeys);
+        let headers = fixedHeaders;
+        if (!headers || headers.length === 0) {
+            let nestedKeys = new Set();
+            nestedData.forEach(obj => Object.keys(obj).forEach(k => nestedKeys.add(k)));
+            headers = Array.from(nestedKeys);
+        }
 
         // Header
         const trHead = document.createElement('tr');

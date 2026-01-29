@@ -34,6 +34,101 @@ func getMutex(id string) *sync.RWMutex {
 	return mu
 }
 
+// normalizeJSONData normalizes the JSON data to have consistent structure
+func normalizeJSONData(data interface{}) (interface{}, error) {
+	arr, ok := data.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("data must be an array of objects")
+	}
+	if len(arr) == 0 {
+		return arr, nil
+	}
+
+	// Collect all unique keys and their types
+	keyTypes := make(map[string]string) // "primitive" or "nested"
+	allKeys := make(map[string]bool)
+	nestedSubKeys := make(map[string][]string)
+
+	for _, item := range arr {
+		obj, ok := item.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("all items must be objects")
+		}
+		for key, val := range obj {
+			allKeys[key] = true
+			if arrVal, isArr := val.([]interface{}); isArr {
+				keyTypes[key] = "nested"
+				if len(arrVal) > 0 {
+					if subObj, ok := arrVal[0].(map[string]interface{}); ok {
+						subKeys := make([]string, 0)
+						for subKey := range subObj {
+							subKeys = append(subKeys, subKey)
+						}
+						nestedSubKeys[key] = subKeys
+					}
+				}
+			} else if _, isObj := val.(map[string]interface{}); isObj {
+				keyTypes[key] = "nested"
+			} else if keyTypes[key] != "nested" {
+				keyTypes[key] = "primitive"
+			}
+		}
+	}
+
+	// Normalize each object
+	for i, item := range arr {
+		obj := item.(map[string]interface{})
+		for key := range allKeys {
+			if _, exists := obj[key]; !exists {
+				if keyTypes[key] == "nested" {
+					obj[key] = []interface{}{}
+				} else {
+					obj[key] = nil
+				}
+			} else {
+				// Ensure type consistency
+				val := obj[key]
+				if keyTypes[key] == "nested" {
+					if arrVal, isArr := val.([]interface{}); isArr {
+						// Ensure sub-objects have consistent keys
+						subKeys := nestedSubKeys[key]
+						for j, subItem := range arrVal {
+							if subObj, ok := subItem.(map[string]interface{}); ok {
+								for _, subKey := range subKeys {
+									if _, exists := subObj[subKey]; !exists {
+										subObj[subKey] = nil
+									}
+								}
+							} else {
+								// If not object, perhaps make it object with subKeys
+								newObj := make(map[string]interface{})
+								for _, subKey := range subKeys {
+									newObj[subKey] = nil
+								}
+								arrVal[j] = newObj
+							}
+						}
+					} else if objVal, isObj := val.(map[string]interface{}); isObj {
+						// Single object, ensure keys
+						subKeys := nestedSubKeys[key]
+						for _, subKey := range subKeys {
+							if _, exists := objVal[subKey]; !exists {
+								objVal[subKey] = nil
+							}
+						}
+					} else {
+						// Convert primitive to empty array
+						obj[key] = []interface{}{}
+					}
+				}
+			}
+		}
+		arr[i] = obj
+	}
+
+	return arr, nil
+}
+
 func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -118,7 +213,14 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validation.ValidateJSONStructure(newData); err != nil {
+	// Normalize the data
+	normalizedData, err := normalizeJSONData(newData)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Normalization Error: %s", err), http.StatusBadRequest)
+		return
+	}
+
+	if err := validation.ValidateJSONStructure(normalizedData); err != nil {
 		http.Error(w, fmt.Sprintf("Validation Error: %s", err), http.StatusBadRequest)
 		return
 	}
@@ -130,7 +232,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Save
 	mu.Lock()
-	err = utils.WriteJSONFile(targetFile, newData)
+	err = utils.WriteJSONFile(targetFile, normalizedData)
 	mu.Unlock()
 	if err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
