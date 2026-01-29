@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "kpis": [
+      {
+        "metric": "Revenue",
+        "value": 100
+      },
+      {
+        "metric": "Cost",
+        "value": 50
+      }
+    ],
+    "name": "Project Alpha",
+    "owner": "Alice"
+  },
+  {
+    "id": 2,
+    "kpis": [
+      {
+        "metric": "Revenue",
+        "value": 200
+      }
+    ],
+    "name": "Project Beta",
+    "owner": "Bob"
+  },
+  {
+    "id": "",
+    "kpis": "",
+    "name": "",
+    "owner": ""
+  }
+]
