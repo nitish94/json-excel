@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-// Validation Constants
-const (
+// Validation Variables
+var (
 	MaxKeysPerObject = 10
 	MaxNestingLevel  = 1 // 0 is root, 1 is one level deep (Table inside Table)
 )

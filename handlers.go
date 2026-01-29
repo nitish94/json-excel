@@ -6,16 +6,32 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"json-excel/pkg/utils"
 	"json-excel/pkg/validation"
 )
+
+var fileMutexes sync.Map
 
 // getDataFilePath returns the filename for a given ID
 func getDataFilePath(id string) string {
 	// Sanitize ID to prevent directory traversal
 	// Simple alphanumeric check could be added here, but hex is safe
 	return fmt.Sprintf("data_%s.json", id)
+}
+
+// getMutex returns the RWMutex for a given ID
+func getMutex(id string) *sync.RWMutex {
+	if mu, ok := fileMutexes.Load(id); ok {
+		return mu.(*sync.RWMutex)
+	}
+	mu := &sync.RWMutex{}
+	actual, loaded := fileMutexes.LoadOrStore(id, mu)
+	if loaded {
+		return actual.(*sync.RWMutex)
+	}
+	return mu
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
@@ -29,10 +45,13 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataFile := getDataFilePath(id)
+	mu := getMutex(id)
 
 	switch r.Method {
 	case "GET":
+		mu.RLock()
 		data, err := utils.ReadJSONFile(dataFile)
+		mu.RUnlock()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -40,22 +59,27 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(data)
 
 	case "POST":
+		mu.Lock()
 		var newData interface{}
 		if err := json.NewDecoder(r.Body).Decode(&newData); err != nil {
+			mu.Unlock()
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		// Validation
 		if err := validation.ValidateJSONStructure(newData); err != nil {
+			mu.Unlock()
 			http.Error(w, fmt.Sprintf("Validation Error: %s", err), http.StatusBadRequest)
 			return
 		}
 
 		if err := utils.WriteJSONFile(dataFile, newData); err != nil {
+			mu.Unlock()
 			http.Error(w, "Error saving file", http.StatusInternalServerError)
 			return
 		}
+		mu.Unlock()
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 
@@ -71,8 +95,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse multipart form
-	// Max upload size: 10 MB
-	r.ParseMultipartForm(10 << 20)
+	r.ParseMultipartForm(maxUploadSize)
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
@@ -103,9 +126,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Generate Unique ID
 	id := utils.GenerateID()
 	targetFile := getDataFilePath(id)
+	mu := getMutex(id)
 
 	// Save
-	if err := utils.WriteJSONFile(targetFile, newData); err != nil {
+	mu.Lock()
+	err = utils.WriteJSONFile(targetFile, newData)
+	mu.Unlock()
+	if err != nil {
 		http.Error(w, "Error saving file", http.StatusInternalServerError)
 		return
 	}
@@ -132,14 +159,19 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dataFile := getDataFilePath(id)
+	mu := getMutex(id)
 
 	// Check if file exists
-	if _, err := os.Stat(dataFile); os.IsNotExist(err) {
+	mu.RLock()
+	_, err := os.Stat(dataFile)
+	if os.IsNotExist(err) {
+		mu.RUnlock()
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
 
 	data, err := utils.ReadJSONFile(dataFile)
+	mu.RUnlock()
 	if err != nil {
 		http.Error(w, "Error reading data", http.StatusInternalServerError)
 		return

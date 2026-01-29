@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentData = [];
 
     // Validations
-    const MAX_KPIS = 10;
+    const MAX_KPIS = 20;
 
     // Get ID from URL or default to 'demo'
     const urlParams = new URLSearchParams(window.location.search);
