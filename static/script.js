@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const addColumnBtn = document.getElementById('addColumnBtn');
     const fileUpload = document.getElementById('fileUpload');
     const statusEl = document.getElementById('status');
+    const modal = document.getElementById('modal');
+    const modalBody = document.getElementById('modal-body');
+    const closeModal = document.getElementsByClassName('close')[0];
+    const h1 = document.querySelector('h1');
 
     let currentData = [];
 
@@ -164,69 +168,109 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     addColumnBtn.addEventListener('click', () => {
-        const newKey = prompt("Enter new column name:");
-        if (!newKey) return;
+        const content = `
+            <h3>Add New Column</h3>
+            <label>Column Name: <input type="text" id="newKey" /></label><br><br>
+            <label>Column Type: 
+                <select id="colType">
+                    <option value="primitive">Primitive</option>
+                    <option value="nested">Nested</option>
+                </select>
+            </label><br><br>
+            <div id="nestedFields" style="display: none;">
+                <label>Sub-column Names (comma-separated): <input type="text" id="subKeys" placeholder="e.g. metric,value" /></label>
+            </div>
+        `;
+        modalBody.innerHTML = content;
 
-        let isNested = false;
-        let subKeys = [];
-        const type = prompt("Enter column type: 'primitive' (default) or 'nested':");
-        if (type && type.toLowerCase() === 'nested') {
-            isNested = true;
-            const subKeysStr = prompt("Enter sub-column names separated by comma (e.g. metric,value):");
-            if (!subKeysStr) return;
-            subKeys = subKeysStr.split(',').map(s => s.trim()).filter(s => s);
-            if (subKeys.length === 0) return;
-        }
+        const colType = document.getElementById('colType');
+        const nestedFields = document.getElementById('nestedFields');
+        colType.onchange = () => {
+            nestedFields.style.display = colType.value === 'nested' ? 'block' : 'none';
+        };
 
-        // Validation: Max keys per object
-        if (currentData.length > 0) {
-            const currentKeys = Object.keys(currentData[0]);
-            if (currentKeys.length >= MAX_KPIS) {
-                alert(`Maximum ${MAX_KPIS} columns allowed.`);
-                return;
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Add Column';
+        confirmBtn.className = 'btn is-primary';
+        confirmBtn.onclick = () => {
+            const newKey = document.getElementById('newKey').value.trim();
+            if (!newKey) return;
+
+            let isNested = colType.value === 'nested';
+            let subKeys = [];
+            if (isNested) {
+                const subKeysStr = document.getElementById('subKeys').value.trim();
+                if (!subKeysStr) return;
+                subKeys = subKeysStr.split(',').map(s => s.trim()).filter(s => s);
+                if (subKeys.length === 0) return;
             }
-            if (currentKeys.includes(newKey)) {
-                alert("Column already exists.");
-                return;
+
+            // Validation: Max keys per object
+            if (currentData.length > 0) {
+                const currentKeys = Object.keys(currentData[0]);
+                if (currentKeys.length >= MAX_KPIS) {
+                    showModal(`<p>Maximum ${MAX_KPIS} columns allowed.</p>`, () => {});
+                    return;
+                }
+                if (currentKeys.includes(newKey)) {
+                    showModal('<p>Column already exists.</p>', () => {});
+                    return;
+                }
             }
-        }
 
-        let newValue;
-        if (isNested) {
-            const emptyObj = {};
-            subKeys.forEach(k => emptyObj[k] = "");
-            newValue = [emptyObj];
-        } else {
-            newValue = "";
-        }
+            let newValue;
+            if (isNested) {
+                const emptyObj = {};
+                subKeys.forEach(k => emptyObj[k] = "");
+                newValue = [emptyObj];
+            } else {
+                newValue = "";
+            }
 
-        // Add key to all rows
-        if (currentData.length === 0) {
-            currentData = [{ [newKey]: newValue }];
-        } else {
-            currentData.forEach(row => {
-                row[newKey] = newValue;
-            });
-        }
-        renderTable(currentData);
+            // Add key to all rows
+            if (currentData.length === 0) {
+                currentData = [{ [newKey]: newValue }];
+            } else {
+                currentData.forEach(row => {
+                    if (isNested) {
+                        const emptyObj = {};
+                        subKeys.forEach(k => emptyObj[k] = "");
+                        row[newKey] = [emptyObj];
+                    } else {
+                        row[newKey] = newValue;
+                    }
+                });
+            }
+            modal.style.display = 'none';
+            renderTable(currentData);
+        };
+        modalBody.appendChild(confirmBtn);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'btn is-secondary';
+        cancelBtn.onclick = () => modal.style.display = 'none';
+        modalBody.appendChild(cancelBtn);
+
+        modal.style.display = 'block';
     });
 
     // ... (existing listeners)
 
     function deleteRow(index) {
-        if (confirm("Delete this row?")) {
+        showModal('<p>Delete this row?</p>', () => {
             currentData.splice(index, 1);
             renderTable(currentData);
-        }
+        });
     }
 
     function deleteColumn(key) {
-        if (confirm(`Delete column "${key}"?`)) {
+        showModal(`<p>Delete column "${key}"?</p>`, () => {
             currentData.forEach(row => {
                 delete row[key];
             });
             renderTable(currentData);
-        }
+        });
     }
 
     function addNestedRow(parentIndex, parentKey, isSingleObject, headers) {
@@ -245,13 +289,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function deleteNestedRow(parentIndex, parentKey, nestedIndex, isSingleObject) {
         if (isSingleObject) {
-            alert("Cannot delete single object nested.");
+            showModal('<p>Cannot delete single object nested.</p>', () => {});
             return;
         }
-        if (confirm("Delete this nested row?")) {
+        showModal('<p>Delete this nested row?</p>', () => {
             currentData[parentIndex][parentKey].splice(nestedIndex, 1);
             renderTable(currentData);
-        }
+        });
     }
 
     function renderTable(data) {
@@ -450,6 +494,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveBtn.addEventListener('click', saveData);
     refreshBtn.addEventListener('click', fetchData);
+
+    // Generate random ID client-side
+    function generateClientID() {
+        return Math.random().toString(36).substr(2, 9);
+    }
+
+    // Modal functions
+    function showModal(content, onConfirm) {
+        modalBody.innerHTML = content;
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Confirm';
+        confirmBtn.className = 'btn is-primary';
+        confirmBtn.onclick = () => {
+            onConfirm();
+            modal.style.display = 'none';
+        };
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'btn is-secondary';
+        cancelBtn.onclick = () => modal.style.display = 'none';
+        modalBody.appendChild(confirmBtn);
+        modalBody.appendChild(cancelBtn);
+        modal.style.display = 'block';
+    }
+
+    closeModal.onclick = () => modal.style.display = 'none';
+    window.onclick = (event) => {
+        if (event.target == modal) modal.style.display = 'none';
+    };
+
+    // Make h1 clickable to create new blank JSON
+    h1.style.cursor = 'pointer';
+    h1.onclick = () => {
+        if (currentData.length > 0) {
+            showModal('<p>Creating a new blank JSON will lose all unsaved data. Proceed?</p>', () => {
+                currentData = [];
+                currentId = generateClientID();
+                window.history.pushState({ path: `?id=${currentId}` }, '', `?id=${currentId}`);
+                renderTable(currentData);
+                showStatus('New blank JSON created', 'success');
+            });
+        } else {
+            currentData = [];
+            currentId = generateClientID();
+            window.history.pushState({ path: `?id=${currentId}` }, '', `?id=${currentId}`);
+            renderTable(currentData);
+        }
+    };
 
     // Initial Load
     fetchData();
