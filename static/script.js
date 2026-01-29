@@ -136,28 +136,53 @@ document.addEventListener('DOMContentLoaded', () => {
             // Initialize with one empty object if empty
             currentData = [{}];
         } else {
-            // Create a new object with keys from the first row (or all keys)
+            // Create a new object with keys from the first row, copying structure
             const firstRow = currentData[0];
             const newRow = {};
-            Object.keys(firstRow).forEach(key => newRow[key] = "");
+            Object.keys(firstRow).forEach(key => {
+                const val = firstRow[key];
+                if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
+                    // Nested array of objects: create one empty object with same keys
+                    const firstObj = val[0];
+                    const emptyObj = {};
+                    Object.keys(firstObj).forEach(k => emptyObj[k] = "");
+                    newRow[key] = [emptyObj];
+                } else if (Array.isArray(val)) {
+                    newRow[key] = [];
+                } else if (typeof val === 'object' && val !== null) {
+                    // Single object
+                    const emptyObj = {};
+                    Object.keys(val).forEach(k => emptyObj[k] = "");
+                    newRow[key] = emptyObj;
+                } else {
+                    newRow[key] = "";
+                }
+            });
             currentData.push(newRow);
         }
         renderTable(currentData);
-        saveData(); // Auto-save on structural change? Or let user save? User request implies "Editor", usually auto-save or explicit. we have explicit save button. Let's start with just UI update.
     });
 
     addColumnBtn.addEventListener('click', () => {
         const newKey = prompt("Enter new column name:");
         if (!newKey) return;
 
-        // Validation: Max 10 keys
-        // We need to check unlimited keys or per object? 
-        // Logic says "Max 10 keys per object".
-        // Let's check max keys of first object + 1
+        let isNested = false;
+        let subKeys = [];
+        const type = prompt("Enter column type: 'primitive' (default) or 'nested':");
+        if (type && type.toLowerCase() === 'nested') {
+            isNested = true;
+            const subKeysStr = prompt("Enter sub-column names separated by comma (e.g. metric,value):");
+            if (!subKeysStr) return;
+            subKeys = subKeysStr.split(',').map(s => s.trim()).filter(s => s);
+            if (subKeys.length === 0) return;
+        }
+
+        // Validation: Max keys per object
         if (currentData.length > 0) {
             const currentKeys = Object.keys(currentData[0]);
-            if (currentKeys.length >= 10) {
-                alert("Maximum 10 columns allowed.");
+            if (currentKeys.length >= MAX_KPIS) {
+                alert(`Maximum ${MAX_KPIS} columns allowed.`);
                 return;
             }
             if (currentKeys.includes(newKey)) {
@@ -166,12 +191,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        let newValue;
+        if (isNested) {
+            const emptyObj = {};
+            subKeys.forEach(k => emptyObj[k] = "");
+            newValue = [emptyObj];
+        } else {
+            newValue = "";
+        }
+
         // Add key to all rows
         if (currentData.length === 0) {
-            currentData = [{ [newKey]: "" }];
+            currentData = [{ [newKey]: newValue }];
         } else {
             currentData.forEach(row => {
-                row[newKey] = "";
+                row[newKey] = newValue;
             });
         }
         renderTable(currentData);
@@ -187,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteColumn(key) {
-        if (confirm(`Delete column "$\{key}"?`)) {
+        if (confirm(`Delete column "${key}"?`)) {
             currentData.forEach(row => {
                 delete row[key];
             });
@@ -195,10 +229,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function addNestedRow(parentIndex, parentKey, isSingleObject, headers) {
+        if (isSingleObject) {
+            // For single object, perhaps not add row, or convert to array
+            // For simplicity, if single object, maybe alert not supported
+            alert("Cannot add rows to single object nested.");
+            return;
+        }
+        // Add a new empty object to the array
+        const emptyObj = {};
+        headers.forEach(key => emptyObj[key] = "");
+        currentData[parentIndex][parentKey].push(emptyObj);
+        renderTable(currentData);
+    }
+
+    function deleteNestedRow(parentIndex, parentKey, nestedIndex, isSingleObject) {
+        if (isSingleObject) {
+            alert("Cannot delete single object nested.");
+            return;
+        }
+        if (confirm("Delete this nested row?")) {
+            currentData[parentIndex][parentKey].splice(nestedIndex, 1);
+            renderTable(currentData);
+        }
+    }
+
     function renderTable(data) {
         container.innerHTML = '';
         if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<p style="text-align:center; opacity:0.6;">No data found. Click "+ Row" to start.</p>';
+            const emptyDiv = document.createElement('div');
+            emptyDiv.style.textAlign = 'center';
+            emptyDiv.style.opacity = '0.6';
+            emptyDiv.innerHTML = '<p>No data found. Start by adding columns or rows.</p>';
+            const addColBtn = document.createElement('button');
+            addColBtn.textContent = '+ Add Column';
+            addColBtn.onclick = () => addColumnBtn.click();
+            emptyDiv.appendChild(addColBtn);
+            container.appendChild(emptyDiv);
             return;
         }
 
@@ -302,6 +369,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createNestedTable(nestedData, parentIndex, parentKey, isSingleObject = false) {
+        const container = document.createElement('div');
+        container.className = 'nested-table-wrapper';
+
+        // Add Row Button for nested
+        const addNestedRowBtn = document.createElement('button');
+        addNestedRowBtn.className = 'add-nested-row-btn';
+        addNestedRowBtn.textContent = '+ Add Nested Row';
+        addNestedRowBtn.onclick = () => addNestedRow(parentIndex, parentKey, isSingleObject, headers);
+        container.appendChild(addNestedRowBtn);
+
         const table = document.createElement('table');
         table.className = 'nested-table';
         const thead = document.createElement('thead');
@@ -313,6 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Header
         const trHead = document.createElement('tr');
+        // Action column for delete
+        const thAction = document.createElement('th');
+        thAction.style.width = '30px';
+        trHead.appendChild(thAction);
         headers.forEach(key => {
             const th = document.createElement('th');
             th.textContent = key;
@@ -323,6 +404,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Rows
         nestedData.forEach((rowObj, nestedIndex) => {
             const tr = document.createElement('tr');
+            // Delete button
+            const tdAction = document.createElement('td');
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-nested-row-btn';
+            delBtn.innerHTML = '&times;';
+            delBtn.title = 'Delete Nested Row';
+            delBtn.onclick = () => deleteNestedRow(parentIndex, parentKey, nestedIndex, isSingleObject);
+            tdAction.appendChild(delBtn);
+            tr.appendChild(tdAction);
             headers.forEach(key => {
                 const td = document.createElement('td');
                 const value = rowObj[key];
@@ -354,7 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         table.appendChild(thead);
         table.appendChild(tbody);
-        return table;
+        container.appendChild(table);
+        return container;
     }
 
     saveBtn.addEventListener('click', saveData);

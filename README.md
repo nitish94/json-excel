@@ -5,7 +5,8 @@ A modern web application that transforms structured JSON into a spreadsheet-like
 ## Features
 
 - **Visual JSON Editing**: Edit JSON data in a spreadsheet-like interface.
-- **Nested Tables**: Support for Table-inside-Table (1 level of nesting).
+- **Nested Tables**: Support for Table-inside-Table (1 level of nesting) with add/delete rows in nested tables.
+- **Create from Scratch**: Start with an empty JSON and add columns (primitive or nested) and rows.
 - **Validation**: Enforces maximum keys per object (configurable) and 1 level of nesting.
 - **Glassmorphism UI**: Modern, premium user interface.
 - **File Management**: Upload and download JSON files with size limits.
